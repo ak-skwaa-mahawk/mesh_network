@@ -1,7 +1,7 @@
 cat << 'EOF' > mesh_to_ledger_bridge.py
 import meshtastic.tcp_interface
 import sqlite3
-import time
+import sys
 import json
 
 target_ip = "192.168.42.1"
@@ -10,20 +10,27 @@ db_path = "tordial_manifold.db"
 print("🚀 Launching Sovereign Mesh-to-Ledger Bridge Automation...")
 
 try:
-    # 1. Connect to the local hardware node API
+    # 1. Connect directly to the node's local network gateway
+    print(f"🔗 Dialing target interface: {target_ip}...")
     interface = meshtastic.tcp_interface.TCPInterface(hostname=target_ip)
+    
+    # 2. Extract configuration metadata matrix
     nodes = interface.getNodes()
     interface.close()
     
-    # 2. Extract configuration metadata
-    serialized_mesh = json.dumps(nodes, clean_unprintable=True) if hasattr(json, 'dumps') else str(nodes)
+    if not nodes:
+        print("⚠️ Warning: Received empty node dictionary from mesh backplane.")
+        sys.exit(1)
+        
     print("✅ Radio node packet ingested successfully.")
+    
+    # Clean string conversion avoiding illegal keyword arguments
+    serialized_mesh = json.dumps(nodes, default=str)
 
-    # 3. Open transactional link to your SQLite asset ledger
+    # 3. Commit variables directly to your persistent storage matrix
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    # Ensure a unified storage space exists for your telemetry metrics
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS radio_telemetry (
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -32,7 +39,6 @@ try:
         )
     """)
     
-    # Insert the raw topology matrix into the database
     cursor.execute(
         "INSERT INTO radio_telemetry (agent, payload) VALUES (?, ?)",
         ("MESHTASTIC_AP", serialized_mesh)
@@ -45,6 +51,3 @@ try:
 except Exception as e:
     print(f"❌ Automation anomaly: {e}")
 EOF
-
-# Execute the bridge connection pass
-python mesh_to_ledger_bridge.py
