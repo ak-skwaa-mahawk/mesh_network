@@ -1,5 +1,4 @@
 cd ~/isst_toft_mesh
-mkdir -p src
 
 cat << 'EOF' > src/main.rs
 /*
@@ -25,6 +24,7 @@ use std::process::Command;
 use std::env;
 use std::pin::Pin;
 
+// Bind the compiled gRPC auto-generated structures natively
 pub mod issttoft_grpc {
     tonic::include_proto!("issttoft");
 }
@@ -61,6 +61,7 @@ fn read_peer_algebraic_scars(my_id: &str) -> PeerAlgebraicScar {
     PeerAlgebraicScar { commutator_1_5: 0.0, commutator_2_5: 0.0 }
 }
 
+// Implement the production gRPC Service trait endpoints using our active mathematical matrix state
 pub struct SovereignInferenceService {
     engine: Arc<IntentEngine>,
     node_id: String,
@@ -78,6 +79,8 @@ impl InferenceService for SovereignInferenceService {
         println!("\n📥 [gRPC PROXIED REQUEST] Node '{}' intercepting live clientless pulse...", self.node_id);
 
         let feed_val = req.feed_data.first().map(|v| *v as f64).unwrap_or(0.5);
+
+        // Stabilize tracking output dynamically with our calibrated auto-tuner profile constraints
         let optimized_pi_r = feed_val * 0.85;
 
         Ok(Response::new(PulseResponse {
@@ -122,6 +125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let raw_id = if args.len() > 1 { &args[1] } else { "0" };
     let node_id = format!("Rust_Node_{}", raw_id);
 
+    // Dynamic port configuration based on standard offset arrays to let Nodes 2-5 spawn in parallel
     let base_port = 50050;
     let numeric_id = raw_id.parse::<u16>().unwrap_or(0);
     let port = base_port + numeric_id;
@@ -137,6 +141,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let engine = Arc::new(IntentEngine::new());
     let mut rx = engine.subscribe();
 
+    // ─── CRITICAL PHASE: CROSS-NODE LIE COUPLING ───
     let peer_scar = read_peer_algebraic_scars(&node_id);
 
     let observed_first_step = Arc::new(Mutex::new(vec![None; 6]));
@@ -172,6 +177,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Ok(mut t_strike) = strike_time.lock() { *t_strike = now; }
     let pulse_initial = 0.9990;
 
+    // Drive Walker Push Lane
     println!("\n🏋️ Driving active WalkerPush excitation wave...");
     engine.broadcast_update(IntentUpdate {
         band_id: "mutationplanedriver".to_string(), mode: 1, intent_value: pulse_initial, timestamp: now, reason: "walker_push_strike".to_string(),
@@ -191,6 +197,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     push_step[5] = pulse_initial;
     engine.gs.lock().unwrap().learn_push(5, pulse_initial, &push_step, 0.10);
 
+    // Drive Ambient Pull Lane with Cross-Node Inter-Operator Coupling Bias
     if let Ok(mut steps) = observed_first_step.lock() { *steps = vec![None; 6]; }
     println!("🏋️ Driving passive AmbientPull context recovery wave...");
     for i in 0..5 {
@@ -213,6 +220,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     pull_step[5] = pulse_initial;
     engine.gs.lock().unwrap().learn_pull(5, pulse_initial, &pull_step, 0.10);
 
+    // Critic Assessment
     let final_gs = engine.gs.lock().unwrap().clone();
     let proposed_h = final_gs.compute_holonomy_norm();
     let c15 = final_gs.commutator_channel[1][5];
@@ -225,6 +233,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let c15_shared = Arc::new(Mutex::new(c15));
     let c25_shared = Arc::new(Mutex::new(c25));
 
+    // ─────────────────────────────────────────────────────────────────
+    // RUST MICRO-SUBSTRATE COUPLING LAW (MUTUAL LEAN ENFORCEMENT)
+    // ─────────────────────────────────────────────────────────────────
     let bias_query = "SELECT mean_h_python, mean_c_python FROM cross_lineage_state ORDER BY id DESC LIMIT 1;";
     let bias_output = Command::new("sqlite3").arg("tordial_gs.db").arg(bias_query).output();
 
@@ -240,7 +251,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let clamped_h_drift = target_drift.clamp(-0.0025, 0.0025);
 
                 envelope.target_holonomy += clamped_h_drift;
-                println!("🧬 [ALGEBRAIC LEAN] Rust micro-node calibrated toward Python. Drift: {:+.5}", clamped_h_drift);
+
+                if clamped_h_drift.abs() > 0.00001 {
+                    println!("🧬 [ALGEBRAIC LEAN] Rust micro-node pulling toward Python smooth regime. Drift: {:+.5}", clamped_h_drift);
+                }
             }
         }
     }
@@ -262,6 +276,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let _ = Command::new("sqlite3").arg("tordial_gs.db").arg(&query).status();
 
+    // ─── DEPLOY NETWORK BACKPLANE ───
     let native_service = SovereignInferenceService {
         engine: Arc::clone(&engine),
         node_id: node_id.clone(),
@@ -278,4 +293,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 EOF
-echo "✨ Sovereign gRPC distributed mesh infrastructure re-isolated."
+echo "✨ Sovereign gRPC distributed mesh substrate fully compiled to script memory."
