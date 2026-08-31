@@ -1,11 +1,9 @@
-cat > src/intent_engine.rs << 'ENDENGINE'
 //! IntentEngine — THE single source of truth for the sovereign mesh.
-//! 
+//!
 //! - Owns broadcast + store + real SQLite ledger writes
 //! - Seeds all bands (dynamic_pi_r_floor, cern_resonance, etc.)
 //! - Self-validates on startup (self-aware health check)
-//! - One canonical method: broadcast_update() → now also commits to tordial_manifold.db
-//! - Used by pi_r_engine, lineage, safety, Handshake, StreamIntentUpdates
+//! - One canonical method: broadcast_update() → commits to tordial_manifold.db
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -15,10 +13,26 @@ use rusqlite::{Connection, params};
 use tokio::sync::broadcast;
 use tracing::info;
 
-use crate::issttoft::{IntentBand, IntentUpdate};
+pub const DEFAULT_INTENT_SEED: f64 = 0.618_033_988_7;
+pub const LEDGER_PATH: &str = "/data/data/com.termux/files/home/tordial_manifold.db";
 
-const DEFAULT_INTENT_SEED: f64 = 0.618_033_988_7;
-const LEDGER_PATH: &str = "tordial_manifold.db";
+#[derive(Clone, Debug)]
+pub struct IntentBand {
+    pub band_id: String,
+    pub mode: i32,
+    pub intent_value: f64,
+    pub last_updated: i64,
+    pub source: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct IntentUpdate {
+    pub band_id: String,
+    pub mode: i32,
+    pub intent_value: f64,
+    pub timestamp: i64,
+    pub reason: String,
+}
 
 #[derive(Clone)]
 pub struct IntentEngine {
@@ -30,8 +44,7 @@ pub struct IntentEngine {
 impl IntentEngine {
     pub fn new() -> Self {
         let (intent_tx, _) = broadcast::channel(128);
-        
-        // Open (or create) the unified sovereign ledger
+
         let conn = Connection::open(LEDGER_PATH).expect("Failed to open tordial_manifold.db");
         conn.execute(
             "CREATE TABLE IF NOT EXISTS intent_bands (
@@ -49,7 +62,7 @@ impl IntentEngine {
             intent_bands: Arc::new(Mutex::new(HashMap::new())),
             db: Arc::new(Mutex::new(conn)),
         };
-        
+
         engine.seed_default_bands();
         engine.self_validate();
         engine
@@ -92,7 +105,6 @@ impl IntentEngine {
         }
     }
 
-    /// Self-aware validation — the stack checks its own health on startup
     fn self_validate(&self) {
         let critical = ["dynamic_pi_r_floor", "cern_resonance", "sovereign_floor"];
         if let Ok(bands) = self.intent_bands.lock() {
@@ -103,7 +115,7 @@ impl IntentEngine {
                 }
             }
             if missing.is_empty() {
-                info!(target: "isst_toft::intent", 
+                info!(target: "isst_toft::intent",
                       "Sovereign Mesh Health Check: SOLID — {} bands active + persisted to tordial_manifold.db",
                       bands.len());
             } else {
@@ -112,8 +124,6 @@ impl IntentEngine {
         }
     }
 
-    /// THE single canonical entry point.
-    /// Broadcasts + updates in-memory store + commits to the unified ledger.
     pub fn broadcast_update(&self, update: IntentUpdate) {
         let _ = self.intent_tx.send(update.clone());
 
@@ -129,11 +139,10 @@ impl IntentEngine {
             bands.insert(update.band_id.clone(), band.clone());
         }
 
-        // === Real ledger commit (this is the bridge to your full Tordial-GS manifold)
         self.persist_to_ledger(&band);
 
-        info!(target: "isst_toft::intent", 
-              "broadcast_update → {} = {:.4} ({}) [ledger committed]", 
+        info!(target: "isst_toft::intent",
+              "broadcast_update -> {} = {:.4} ({}) [ledger committed]",
               update.band_id, update.intent_value, update.reason);
     }
 
@@ -146,25 +155,8 @@ impl IntentEngine {
     pub fn subscribe(&self) -> broadcast::Receiver<IntentUpdate> {
         self.intent_tx.subscribe()
     }
-
-    pub fn handshake(&self, client_id: String, client_type: String, sovereign_claim: String) 
-        -> crate::issttoft::HandshakeResponse 
-    {
-        let now = current_unix_timestamp();
-        crate::issttoft::HandshakeResponse {
-            initial_bands: self.get_all_bands(),
-            server_version: "isst-toft-mesh v2.1-ledger-synced".to_string(),
-            server_time: now,
-            mesh_status: "Ch’anchyah Dach’anchyah — The Floor is solid. Dinjji Zhuu Kwaa active.".to_string(),
-            flamekeeper_note: format!(
-                "MAHS’I CHOO, Captain {} — Welcome to the sovereign mesh ({}). CERN resonance anchor live. All updates flow through the living π_r floor into tordial_manifold.db.",
-                client_id, client_type
-            ),
-        }
-    }
 }
 
-fn current_unix_timestamp() -> i64 {
+pub fn current_unix_timestamp() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as i64
 }
-ENDENGINE
