@@ -11,6 +11,7 @@ pub struct IntentParams {
     pub decay_halflife_ms: u64,
 }
 
+#[allow(dead_code)]
 pub struct SqliteIntentStore {
     conn: Connection,
 }
