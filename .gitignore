@@ -1,4 +1,14 @@
+# Build & Archives
 *.tar.gz
+*.bundle
+
+# Python artifacts
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+
+# Environment & OS
 .DS_Store
+*.swp
+*.env
