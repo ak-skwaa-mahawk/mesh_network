@@ -1,0 +1,67 @@
+{
+  "config_type": "manual_partitioning",
+  "device_modifications": [
+    {
+      "device": "/dev/nvme0n1",
+      "wipe": true,
+      "partitions": [
+        {
+          "status": "create",
+          "type": "boot",
+          "start": {
+            "value": 1,
+            "unit": "MiB",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "size": {
+            "value": 512,
+            "unit": "MiB",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "fs_type": "fat32",
+          "mountpoint": "/boot",
+          "mount_options": [],
+          "flags": [
+            "boot"
+          ],
+          "dev_path": null,
+          "obj_id": "boot_part"
+        },
+        {
+          "status": "create",
+          "type": "primary",
+          "start": {
+            "value": 513,
+            "unit": "MiB",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "size": {
+            "value": 475,
+            "unit": "GiB",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "fs_type": "btrfs",
+          "mountpoint": "/",
+          "mount_options": [
+            "compress=zstd"
+          ],
+          "flags": [],
+          "dev_path": null,
+          "obj_id": "root_part"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+#!/data/data/com.termux/files/usr/bin/python3
+import sys, json
+from archinstall.lib.disk.device_handler import device_handler
+from archinstall.lib.models import DiskLayoutConfiguration
+
+if len(sys.argv) < 2:
+    print("Usage: arch-val-disk <disk_layout.json>")
+    sys.exit(1)
+
+device_handler.load_devices()
+
+with open(sys.argv[1]) as f:
+    raw = json.load(f)
+
+disk_config = raw.get("disk_config", raw)
+
+try:
+    layout = DiskLayoutConfiguration.parse_arg(disk_config)
+    if not layout or not layout.device_modifications:
+        print("[-] Error: No devices in layout matched detected hardware/mock disks.")
+        sys.exit(1)
+
+    print(f"[+] Successfully validated disk topology: {layout.config_type}")
+    for mod in layout.device_modifications:
+        print(f"    Target: {mod.device_path} (wipe={mod.wipe})")
+        for part in mod.partitions:
+            fs = part.fs_type.value if part.fs_type else "none"
+            start_str = f"{part.start.value} {part.start.unit.name}"
+            size_str = f"{part.length.value} {part.length.unit.name}"
+            print(f"      - [{part.type.value}] {part.mountpoint}: {size_str} (start: {start_str}, fs: {fs})")
+            if part.btrfs_subvols:
+                for sub in part.btrfs_subvols:
+                    print(f"          * Subvol: '{sub.name}' -> {sub.mountpoint}")
+    sys.exit(0)
+except Exception as err:
+    print(f"[-] Validation failed: {err}")
+    sys.exit(2)

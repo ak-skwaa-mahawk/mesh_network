@@ -1,0 +1,42 @@
+#!/data/data/com.termux/files/usr/bin/bash
+DEV="${1:-/dev/sda}"
+NAME="$(basename "$DEV")"
+SIZE="${2:-68719476736}"
+
+cat << JSON_EOF > "$PREFIX/bin/lsblk"
+#!/bin/sh
+cat << 'JSON'
+{
+   "blockdevices": [
+      {
+         "name": "$NAME",
+         "path": "$DEV",
+         "pkname": null,
+         "size": $SIZE,
+         "log-sec": 512,
+         "pttype": "gpt",
+         "ptuuid": "00000000-0000-0000-0000-000000000000",
+         "rota": true,
+         "ro": false,
+         "type": "disk",
+         "mountpoint": null,
+         "mountpoints": [null],
+         "tran": "sata",
+         "partn": null,
+         "partuuid": null,
+         "parttype": null,
+         "uuid": null,
+         "fstype": null,
+         "fsver": null,
+         "fsavail": null,
+         "fsuse%": null,
+         "fsroots": [null],
+         "children": []
+      }
+   ]
+}
+JSON
+exit 0
+JSON_EOF
+chmod +x "$PREFIX/bin/lsblk"
+echo "[+] Mock disk set to $DEV ($SIZE bytes)"
