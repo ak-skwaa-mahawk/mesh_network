@@ -1,16 +1,58 @@
 #!/data/data/com.termux/files/usr/bin/bash
-PORT=8080
-IP=$(ifconfig 2>/dev/null | grep -E "inet " | grep -v "127.0.0.1" | awk '{print $2}' | head -n 1)
+set -euo pipefail
 
-echo "=========================================================="
-echo " Termux Hardware Provisioning Server"
-echo " Host: http://${IP}:${PORT}"
-echo "=========================================================="
-echo "Available payloads:"
-ls -1 *.json 2>/dev/null | sed 's/^/  - /'
-echo "=========================================================="
-echo "Target machine boot command:"
-echo "  archinstall --config http://${IP}:${PORT}/handheld_gaming_manifest.json"
-echo "=========================================================="
+DEFAULT_PORT="${1:-8888}"
 
-python3 -m http.server "$PORT"
+exec python3 -c "
+import socketserver, http.server, socket, sys, glob
+
+preferred_port = int(sys.argv[1]) if len(sys.argv) > 1 else $DEFAULT_PORT
+
+class ReusableTCPServer(socketserver.TCPServer):
+    allow_reuse_address = True
+
+chosen_port = None
+for p in range(preferred_port, preferred_port + 20):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(('', p))
+        s.close()
+        chosen_port = p
+        break
+    except OSError:
+        continue
+
+if not chosen_port:
+    print('[-] Error: No open ports found in probe range.')
+    sys.exit(1)
+
+# Detect primary LAN IP
+lan_ip = '127.0.0.1'
+try:
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(('8.8.8.8', 80))
+    lan_ip = s.getsockname()[0]
+    s.close()
+except Exception:
+    pass
+
+print('==========================================================')
+print(' Termux Hardware Provisioning Server')
+print(f' Host: http://{lan_ip}:{chosen_port}')
+print('==========================================================')
+print('Available payloads:')
+for f in sorted(glob.glob('*.json')):
+    print(f'  - {f}')
+print('==========================================================')
+print('Target machine boot command:')
+print(f'  archinstall --config http://{lan_ip}:{chosen_port}/handheld_gaming_manifest.json')
+print('==========================================================')
+
+Handler = http.server.SimpleHTTPRequestHandler
+with ReusableTCPServer(('', chosen_port), Handler) as httpd:
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print('\n[*] Server stopped.')
+" "$DEFAULT_PORT"
