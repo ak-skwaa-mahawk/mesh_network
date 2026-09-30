@@ -1,0 +1,89 @@
+{
+  "config_type": "manual_partitioning",
+  "device_modifications": [
+    {
+      "device": "/dev/nvme0n1",
+      "wipe": true,
+      "partitions": [
+        {
+          "status": "create",
+          "type": "boot",
+          "start": {
+            "value": 1,
+            "unit": "MiB",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "size": {
+            "value": 2048,
+            "unit": "MiB",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "fs_type": "fat32",
+          "mountpoint": "/boot",
+          "mount_options": [
+            "fmask=0077",
+            "dmask=0077"
+          ],
+          "flags": [
+            "boot"
+          ],
+          "dev_path": null,
+          "obj_id": "esp_part"
+        },
+        {
+          "status": "create",
+          "type": "primary",
+          "start": {
+            "value": 2049,
+            "unit": "MiB",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "size": {
+            "value": 1020,
+            "unit": "GiB",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "fs_type": "btrfs",
+          "mountpoint": "/",
+          "mount_options": [
+            "compress=zstd:1",
+            "space_cache=v2"
+          ],
+          "flags": [],
+          "dev_path": null,
+          "obj_id": "root_part",
+          "btrfs": [
+            {
+              "name": "@",
+              "mountpoint": "/"
+            },
+            {
+              "name": "@home",
+              "mountpoint": "/home"
+            },
+            {
+              "name": "@cache",
+              "mountpoint": "/cache"
+            },
+            {
+              "name": "@snapshots",
+              "mountpoint": "/snapshots"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
