@@ -1,0 +1,94 @@
+{
+  "config_type": "manual_partitioning",
+  "device_modifications": [
+    {
+      "device": "/dev/nvme0n1",
+      "wipe": true,
+      "partitions": [
+        {
+          "status": "create",
+          "type": "boot",
+          "start": {
+            "value": 1048576,
+            "unit": "B",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "size": {
+            "value": 1073741824,
+            "unit": "B",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "fs_type": "fat32",
+          "mountpoint": "/boot",
+          "mount_options": [
+            "fmask=0077",
+            "dmask=0077"
+          ],
+          "flags": [
+            "boot"
+          ],
+          "dev_path": null,
+          "obj_id": "esp_part"
+        },
+        {
+          "status": "create",
+          "type": "primary",
+          "start": {
+            "value": 1074790400,
+            "unit": "B",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "size": {
+            "value": 548679974912,
+            "unit": "B",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "fs_type": "btrfs",
+          "mountpoint": "/",
+          "mount_options": [
+            "compress=zstd:3",
+            "noatime",
+            "discard=async"
+          ],
+          "flags": [],
+          "dev_path": null,
+          "obj_id": "root_part",
+          "btrfs": [
+            {
+              "name": "@",
+              "mountpoint": "/"
+            },
+            {
+              "name": "@home",
+              "mountpoint": "/home"
+            },
+            {
+              "name": "@games",
+              "mountpoint": "/games"
+            },
+            {
+              "name": "@snapshots",
+              "mountpoint": "/snapshots"
+            },
+            {
+              "name": "@var_log",
+              "mountpoint": "/var_log"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

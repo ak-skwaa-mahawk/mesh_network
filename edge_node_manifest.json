@@ -1,0 +1,70 @@
+{
+  "config_type": "manual_partitioning",
+  "device_modifications": [
+    {
+      "device": "/dev/sda",
+      "wipe": true,
+      "partitions": [
+        {
+          "status": "create",
+          "type": "boot",
+          "start": {
+            "value": 1048576,
+            "unit": "B",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "size": {
+            "value": 536870912,
+            "unit": "B",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "fs_type": "fat32",
+          "mountpoint": "/boot",
+          "mount_options": [
+            "fmask=0077",
+            "dmask=0077"
+          ],
+          "flags": [
+            "boot"
+          ],
+          "dev_path": null,
+          "obj_id": "esp_part"
+        },
+        {
+          "status": "create",
+          "type": "primary",
+          "start": {
+            "value": 537919488,
+            "unit": "B",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "size": {
+            "value": 136899985408,
+            "unit": "B",
+            "sector_size": {
+              "value": 512,
+              "unit": "B"
+            }
+          },
+          "fs_type": "ext4",
+          "mountpoint": "/",
+          "mount_options": [
+            "noatime"
+          ],
+          "flags": [],
+          "dev_path": null,
+          "obj_id": "root_part"
+        }
+      ]
+    }
+  ]
+}

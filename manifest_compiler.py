@@ -2,6 +2,7 @@
 import sys
 import json
 from pathlib import Path
+from archinstall.lib.disk.device_handler import device_handler
 from archinstall.lib.models import Size, SectorSize, Unit, SubvolumeModification
 
 PROFILES = {
@@ -29,24 +30,47 @@ PROFILES = {
     }
 }
 
-def generate_disk_spec(profile_key, total_gib=512):
+def generate_disk_spec(profile_key):
     if profile_key not in PROFILES:
         raise ValueError(f"Unknown profile: {profile_key}. Available: {list(PROFILES.keys())}")
-    
+
     spec = PROFILES[profile_key]
-    sec = SectorSize.default()
-    
-    esp_size = spec["esp_size_mib"]
-    p1_start = Size(1, Unit.MiB, sec).json()
-    p1_size = Size(esp_size, Unit.MiB, sec).json()
-    
-    # 1 MiB start alignment + headroom reserved at tail for backup GPT
-    root_start_mib = esp_size + 1
-    root_size_gib = total_gib - (esp_size // 1024) - 2
-    
-    p2_start = Size(root_start_mib, Unit.MiB, sec).json()
-    p2_size = Size(root_size_gib, Unit.GiB, sec).json()
-    
+    target_path = Path(spec["disk"])
+
+    device_handler.load_devices()
+    dev = device_handler.get_device(target_path)
+    if not dev:
+        raise RuntimeError(f"Device {target_path} not found in device_handler. Run set-mock-disk first.")
+
+    sector_size = dev.device_info.sector_size
+    total_bytes = dev.device_info.total_size.value
+    total_sectors = total_bytes // sector_size.value
+
+    # Standard 1 MiB alignment = 2048 sectors (for 512B sectors)
+    align_sectors = (1024 * 1024) // sector_size.value
+
+    # Partition 1: ESP
+    esp_start_sec = align_sectors
+    esp_size_mib = spec["esp_size_mib"]
+    esp_sectors = (esp_size_mib * 1024 * 1024) // sector_size.value
+
+    # Partition 2: Root
+    root_start_sec = esp_start_sec + esp_sectors
+
+    # Reserve the final 34 sectors for backup GPT and snap length DOWN to 1 MiB alignment
+    max_end_sector = total_sectors - 34
+    available_sectors = max_end_sector - root_start_sec
+    root_sectors = (available_sectors // align_sectors) * align_sectors
+
+    if root_sectors <= 0:
+        raise ValueError("Calculated root partition size is zero or negative.")
+
+    p1_start = Size(esp_start_sec * sector_size.value, Unit.B, sector_size).json()
+    p1_size = Size(esp_sectors * sector_size.value, Unit.B, sector_size).json()
+
+    p2_start = Size(root_start_sec * sector_size.value, Unit.B, sector_size).json()
+    p2_size = Size(root_sectors * sector_size.value, Unit.B, sector_size).json()
+
     partitions = [
         {
             "status": "create",
@@ -61,13 +85,13 @@ def generate_disk_spec(profile_key, total_gib=512):
             "obj_id": "esp_part"
         }
     ]
-    
+
     if spec.get("root_subvols"):
         subvols = []
         for name in spec["root_subvols"]:
             mp = "/" if name == "@" else f"/{name.replace('@', '')}"
             subvols.append(SubvolumeModification(name=name, mountpoint=mp).json())
-            
+
         partitions.append({
             "status": "create",
             "type": "primary",
@@ -94,7 +118,7 @@ def generate_disk_spec(profile_key, total_gib=512):
             "dev_path": None,
             "obj_id": "root_part"
         })
-        
+
     return {
         "config_type": "manual_partitioning",
         "device_modifications": [
@@ -108,9 +132,8 @@ def generate_disk_spec(profile_key, total_gib=512):
 
 if __name__ == "__main__":
     target = sys.argv[1] if len(sys.argv) > 1 else "handheld_gaming"
-    size = int(sys.argv[2]) if len(sys.argv) > 2 else 512
-    manifest = generate_disk_spec(target, size)
-    
+    manifest = generate_disk_spec(target)
+
     out_file = Path(f"{target}_manifest.json")
     out_file.write_text(json.dumps(manifest, indent=2))
-    print(f"[+] Compiled '{target}' ({size} GiB) -> {out_file}")
+    print(f"[+] Compiled '{target}' -> {out_file}")
