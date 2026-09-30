@@ -1,0 +1,16 @@
+#!/data/data/com.termux/files/usr/bin/bash
+PORT=8080
+IP=$(ifconfig 2>/dev/null | grep -E "inet " | grep -v "127.0.0.1" | awk '{print $2}' | head -n 1)
+
+echo "=========================================================="
+echo " Termux Hardware Provisioning Server"
+echo " Host: http://${IP}:${PORT}"
+echo "=========================================================="
+echo "Available payloads:"
+ls -1 *.json 2>/dev/null | sed 's/^/  - /'
+echo "=========================================================="
+echo "Target machine boot command:"
+echo "  archinstall --config http://${IP}:${PORT}/handheld_gaming_manifest.json"
+echo "=========================================================="
+
+python3 -m http.server "$PORT"
