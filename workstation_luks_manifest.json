@@ -9,16 +9,16 @@
           "status": "create",
           "type": "boot",
           "start": {
-            "value": 1,
-            "unit": "MiB",
+            "value": 1048576,
+            "unit": "B",
             "sector_size": {
               "value": 512,
               "unit": "B"
             }
           },
           "size": {
-            "value": 2048,
-            "unit": "MiB",
+            "value": 2147483648,
+            "unit": "B",
             "sector_size": {
               "value": 512,
               "unit": "B"
@@ -40,16 +40,16 @@
           "status": "create",
           "type": "primary",
           "start": {
-            "value": 2049,
-            "unit": "MiB",
+            "value": 2148532224,
+            "unit": "B",
             "sector_size": {
               "value": 512,
               "unit": "B"
             }
           },
           "size": {
-            "value": 1020,
-            "unit": "GiB",
+            "value": 1097362046976,
+            "unit": "B",
             "sector_size": {
               "value": 512,
               "unit": "B"
