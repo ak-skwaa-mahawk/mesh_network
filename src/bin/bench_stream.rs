@@ -27,12 +27,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Warmup unary call
     let warmup_tel = [4.0, 3.0, 0.01, 0.02, 3.5, 0.98, 0.2, 0.002];
-    for _ in 0..10 {
+    for _ in 0..5 {
         let _ = client.route_burst("WARMUP", 500, warmup_tel).await?;
     }
 
-    // Bidirectional stream setup
-    let (tx, rx) = mpsc::channel::<RouteBurstRequest>(32);
+    let (tx, rx) = mpsc::channel::<RouteBurstRequest>(512);
     let request_stream = ReceiverStream::new(rx);
 
     let mut response_stream = client.stream_route_bursts(request_stream).await?;
@@ -40,7 +39,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let t0 = Instant::now();
     let mut latencies_us = Vec::with_capacity(ITERATIONS);
 
-    // Producer task feeding frames into channel
     let producer_handle = tokio::spawn(async move {
         for i in 0..ITERATIONS {
             let now = SystemTime::now()
@@ -68,6 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 break;
             }
         }
+        drop(tx);
     });
 
     let mut frame_start = Instant::now();
@@ -79,6 +78,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         latencies_us.push(elapsed);
         received += 1;
         frame_start = Instant::now();
+
+        if received % 200 == 0 {
+            println!("   -> Processed {} / {} frames...", received, ITERATIONS);
+        }
 
         if received == ITERATIONS {
             break;
