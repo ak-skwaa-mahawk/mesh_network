@@ -2,9 +2,11 @@ pub mod tordial {
     tonic::include_proto!("tordial.v1");
 }
 
-use tordial::sovereign_mesh_service_client::SovereignMeshServiceClient;
-use tordial::{RouteBurstRequest, RouteBurstResponse, TelemetryVector};
+use tokio_stream::Stream;
 use tonic::transport::Channel;
+use tonic::Streaming;
+use tordial::sovereign_mesh_service_client::SovereignMeshServiceClient;
+pub use tordial::{RouteBurstRequest, RouteBurstResponse, TelemetryVector};
 
 #[derive(Clone)]
 pub struct TordialMeshClient {
@@ -23,11 +25,16 @@ impl TordialMeshClient {
         budget_sats: u64,
         telemetry: [f64; 8],
     ) -> Result<RouteBurstResponse, tonic::Status> {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
+
         let request = tonic::Request::new(RouteBurstRequest {
             origin_node_id: origin_node_id.to_string(),
             budget_sats,
-            payload_digest: format!("rust_digest_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
-            timestamp_epoch_ms: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64,
+            payload_digest: format!("rust_digest_{}", now),
+            timestamp_epoch_ms: now as i64,
             telemetry: Some(TelemetryVector {
                 latency_ms: telemetry[0],
                 queue_depth: telemetry[1],
@@ -41,6 +48,17 @@ impl TordialMeshClient {
         });
 
         let response = self.client.route_burst(request).await?;
+        Ok(response.into_inner())
+    }
+
+    pub async fn stream_route_bursts<S>(
+        &mut self,
+        stream: S,
+    ) -> Result<Streaming<RouteBurstResponse>, tonic::Status>
+    where
+        S: Stream<Item = RouteBurstRequest> + Send + 'static,
+    {
+        let response = self.client.stream_route_bursts(tonic::Request::new(stream)).await?;
         Ok(response.into_inner())
     }
 }
